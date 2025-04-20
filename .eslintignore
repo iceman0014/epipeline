@@ -1,0 +1,9 @@
+.eslintrc.*
+.stylelintrc.*
+.prettierrc.*
+
+dist
+build
+nginx
+node_modules
+deploy/cnap-dev/k8s/app.yaml

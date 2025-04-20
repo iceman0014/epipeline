@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-v1
+  annotations:
+    kubesphere.io/isElasticReplicas: "false"
+    servicemesh.kubesphere.io/enabled: "false"
+  labels:
+    app: sample
+    app.kubernetes.io/name: k8s_namespace
+    app.kubernetes.io/version: v1
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      app: sample
+      app.kubernetes.io/name: k8s_namespace
+      app.kubernetes.io/version: v1
+      version: v1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sample
+        app.kubernetes.io/name: k8s_namespace
+        app.kubernetes.io/version: v1
+        version: v1
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: default
+      serviceAccount: default
+      imagePullSecrets:
+        - name: ihd-harbor-secret
+      containers:
+        - name: sample
+          image: harbor_registry/harbor_namespace/sample:latest
+          resources:
+            limits:
+              cpu: 2
+              memory: 2048Mi
+            requests:
+              cpu: 1m
+              memory: 512Mi
+          ports:
+            - name: service-port
+              containerPort: 8099
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 8099
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8099
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3

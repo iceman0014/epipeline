@@ -1,0 +1,226 @@
+// pipeline {
+//     agent{
+//         node {
+//            label 'nodejs-22'
+//         }
+//     }
+//     environment {
+//         REMOTE_NAME = 'ccis-nurse-frontend'
+//         REMOTE_HOST = '10.100.83.151'
+//         REMOTE_USER = 'root'
+//         REMOTE_PASSWORD = 'abc,123.'
+//         REMOTE_DIR = '/webserver/ccis-nurse/frontend'
+//         TAR_FILE='dist.tar.gz'
+//         GIT_URL= 'http://10.100.77.238/icu/ccis/frontend/ccis-nurse-frontend.git'
+//     }
+//     options {
+//         buildDiscarder(logRotator(numToKeepStr: '5'))
+//         disableConcurrentBuilds()
+//     }
+//     parameters {
+//         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'branch', type: 'PT_BRANCH', description: '请选择分支'
+//     }
+//     stages {
+//         stage('Checkout Code') {
+//             steps {
+//                 git branch: "${params.branch}", credentialsId: 'ccis-git-token', url: "${env.GIT_URL}"
+//             }
+//         }
+//         stage('Build with npm') {
+//             steps {
+//                 container('nodejs-22') {
+//                   script {
+//                       sh """
+//                           npm config set registry=http://10.101.17.240:8081/repository/npm-realone-group/
+//                           npm install pnpm@9.11.0 -g
+//                           echo '清理依赖'
+//                           rm -rf node_modules
+//                           rm -f pnpm-lock.yaml
+//                           echo '设置 pnpm store 路径'
+//                           pnpm config set store-dir ./pnpm-store
+//                           echo '安装依赖'
+//                           pnpm install --no-frozen-lockfile
+//                           echo '安装额外依赖'
+//                           pnpm add dayjs@1.11.10
+//                           pnpm add ant-design-vue@3.2.20
+//                           pnpm rebuild
+//                           echo '删除历史构建的dist目录'
+//                           if [ -d "dist" ];then
+//                               rm -fr dist
+//                           fi
+//                           echo '安装指定版本的 typescript 和 vue-tsc'
+//                           pnpm add -D typescript@5.0.4 vue-tsc@1.6.5
+//                           echo '显示版本信息'
+//                           ./node_modules/.bin/tsc --version
+//                           ./node_modules/.bin/vue-tsc --version
+//                           echo '开始构建'
+//                           export NODE_OPTIONS="--max-old-space-size=8192"
+//                           export TS_NODE_TRANSPILE_ONLY=true
+//                           pnpm run build:only
+//                           echo '清理构建缓存'
+//                           rm -rf ./pnpm-store
+//                           echo '打包'
+//                           tar -zcvf ${env.TAR_FILE} dist;
+//                       """
+//                   }
+//                 }
+//             }
+//         }
+//         stage('Deploy to Remote') {
+//             steps {
+//                 container('nodejs-22') {
+//                   script {
+//                       def remoteConfig = [
+//                           name: env.REMOTE_NAME,
+//                           host: env.REMOTE_HOST,
+//                           user: env.REMOTE_USER,
+//                           password: env.REMOTE_PASSWORD,
+//                           port: 22,
+//                           allowAnyHosts: true
+//                       ]
+//                       sshPut remote: remoteConfig, from: env.TAR_FILE, into: env.REMOTE_DIR
+//                       sshCommand remote: remoteConfig, command: """
+//                           cd ${env.REMOTE_DIR}  &&  rm -rf dist;
+//                           cd ${env.REMOTE_DIR}  &&  tar -zxvf ${env.TAR_FILE};
+//                           echo '删除tar包..'
+//                           cd ${env.REMOTE_DIR}  &&  rm -rf ${env.TAR_FILE};
+//                           cd ${env.REMOTE_DIR}  && mv dist ccis-nurse;
+//                           echo '重新加载nginx..'
+//                           nginx -s reload;
+//                       """
+//                   }
+//                 }
+//             }
+//         }
+//     }
+// }
+
+pipeline {
+
+  agent {
+    kubernetes {
+      inheritFrom 'nodejs-18  nodejs-16'
+    }
+  }
+
+  options {
+    buildDiscarder(
+      logRotator(
+          // number of build logs to keep
+          numToKeepStr:'5',
+          // history to keep in days
+          daysToKeepStr: '15',
+          // artifacts are kept for days
+          artifactDaysToKeepStr: '15',
+          // number of builds have their artifacts kept
+          artifactNumToKeepStr: '5'
+      )
+    )
+  }
+
+  environment {
+    APP_NAME = 'app-iwb-ccis-nurse'
+    NPM_REGISTRY = 'http://10.101.17.240:8081/repository/npm-realone-group/'
+    HARBOR_CREDENTIAL_ID = 'docker-harbor-token'
+    HARBOR_NAMESPACE = 'cnapstore-ihd-rs7-dev'
+    REGISTRY = '10.100.139.147'
+    K8S_CONFIG_CREDENTIAL_ID  = 'kubeconfig-dev'
+    K8S_NAMESPACE = 'ihd-rs7-dev'
+    ACTIVE_PROFILE = 'cnap-dev'
+  }
+
+  stages {
+
+    stage('generate tag') {
+      steps {
+        container('nodejs-16') {
+          script {
+            env.commitid = sh(script: 'git rev-parse  --short HEAD ', returnStdout: true).trim()
+            env.imageTag = "${commitid}.$BUILD_NUMBER-dev"
+          }
+        }
+      }
+    }
+
+    //  stage('sonarqube analysis') {
+    //    steps {
+    //      container('nodejs-16') {
+    //        withSonarQubeEnv('sonar') {
+    //          dir('$WORKSPACE/') {
+    //            sh 'sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN} -Dsonar.projectKey=$APP_NAME -Dsonar.sources=. '
+    //          }
+    //        }
+    //        timeout(time: 5, unit: 'MINUTES') {
+    //          waitForQualityGate abortPipeline: true
+    //        }
+    //      }
+    //    }
+    //  }
+
+    stage('npm build') {
+      steps {
+        container('nodejs-18') {
+          sh(label: 'build', script: '''
+              cd $WORKSPACE
+              npm i --registry $NPM_REGISTRY
+              npm run build
+              cd dist/
+              tar zcf dist.tar.gz *
+          ''')
+          archiveArtifacts 'dist/dist.tar.gz'
+        }
+      }
+    }
+
+    stage('build image') {
+      steps {
+        container('nodejs-16') {
+          dir('$WORKSPACE/') {
+            sh 'docker build -f deploy/$ACTIVE_PROFILE/Dockerfile -t $REGISTRY/$HARBOR_NAMESPACE/$APP_NAME:${imageTag} .'
+          }
+          withCredentials([usernamePassword(
+                  passwordVariable: 'HARBOR_PASSWORD',
+                  usernameVariable: 'HARBOR_USERNAME',
+                  credentialsId : "$HARBOR_CREDENTIAL_ID",
+          )]) {
+            sh 'echo "$HARBOR_PASSWORD" | docker login $REGISTRY -u "$HARBOR_USERNAME" --password-stdin'
+            sh 'docker push $REGISTRY/$HARBOR_NAMESPACE/$APP_NAME:${imageTag}'
+            sh 'docker rmi $REGISTRY/$HARBOR_NAMESPACE/$APP_NAME:${imageTag}'
+          }
+        }
+      }
+    }
+
+    stage('deploy') {
+      steps {
+        container('nodejs-16') {
+          withCredentials([kubeconfigContent(
+                  credentialsId: "$K8S_CONFIG_CREDENTIAL_ID",
+                  variable: 'k8sconfig',
+          )]) {
+            writeFile file: "$WORKSPACE/kube/config", text: "${k8sconfig}"
+            sh 'mkdir -p ~/.kube && cat $WORKSPACE/kube/config > ~/.kube/config'
+            dir('$WORKSPACE/deploy/cnap-dev/k8s/') {
+              sh "pwd"
+              sh "ls -l"
+              // Replace 'k8s_namespace' with the actual K8S_NAMESPACE in all YAML files
+              sh "sed -i 's#k8s_namespace#${K8S_NAMESPACE}#g' *.yaml"
+              // Replace 'harbor_registry' with the actual REGISTRY in all YAML files
+              sh "sed -i 's#harbor_registry#${REGISTRY}#g' *.yaml"
+              // Replace 'harbor_namespace' with the actual HARBOR_NAMESPACE in all YAML files
+              sh "sed -i 's#harbor_namespace#${HARBOR_NAMESPACE}#g' *.yaml"
+              // Replace 'sample' with the actual APP_NAME in all YAML files
+              sh "sed -i 's#sample#${APP_NAME}#g' *.yaml"
+              // Replace 'latest' with the actual imageTag in all YAML files
+              sh "sed -i 's#latest#${imageTag}#g' *.yaml"
+              sh 'kubectl apply -n $K8S_NAMESPACE -f .'
+            }
+          }
+        }
+      }
+    }
+
+  }
+
+}
+

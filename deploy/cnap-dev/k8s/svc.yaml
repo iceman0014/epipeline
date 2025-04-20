@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample
+  annotations:
+    servicemesh.kubesphere.io/enabled: "true"
+  labels:
+    app: sample
+    app.kubernetes.io/name: k8s_namespace
+    app.kubernetes.io/version: v1
+    version: v1
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-8099
+      port: 8099
+      targetPort: 8099
+  selector:
+    app: sample
+    app.kubernetes.io/name: k8s_namespace
+    app.kubernetes.io/version: v1

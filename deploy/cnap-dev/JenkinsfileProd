@@ -1,0 +1,57 @@
+pipeline {
+    agent{
+        node {
+           label 'nodejs-22'
+        }
+    }
+    environment {
+        TAR_FILE='dist.tar.gz'
+        GIT_URL= 'http://10.100.77.238/icu/ccis/frontend/ccis-nurse-frontend.git'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        disableConcurrentBuilds()
+    }
+    parameters {
+        gitParameter branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'branch', type: 'PT_BRANCH', description: '请选择分支'
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: "${params.branch}", credentialsId: 'ccis-git-token', url: "${env.GIT_URL}"
+            }
+        }
+        stage('Build with npm') {
+            steps {
+                container('nodejs-22') {
+                  script {
+                      sh """
+                          npm config set registry=http://10.101.17.240:8081/repository/npm-realone-group/
+                          npm install pnpm@9.11.0 -g
+                          echo '更新依赖'
+                          if [ -f "pnpm-lock.yaml" ];then
+                              rm -f pnpm-lock.yaml
+                          fi
+                          pnpm i
+                          pnpm rebuild
+                          echo '删除历史构建的dist目录'
+                          if [ -d "dist" ];then
+                              rm -fr dist
+                          fi
+                          echo '开始构建'
+                          pnpm run build
+                          echo '打包'
+                          tar -zcvf ${env.TAR_FILE} dist;
+                      """
+                  }
+                }
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: "${env.TAR_FILE}", allowEmptyArchive: false
+            }
+        }
+    }
+}

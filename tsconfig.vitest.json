@@ -1,0 +1,20 @@
+{
+  // Extends the configuration from tsconfig.app.json
+  "extends": "./tsconfig.app.json",
+  // No directories or files are excluded from compilation
+  "exclude": [],
+  "compilerOptions": {
+    // Enables composite projects
+    "composite": true,
+    // No specific library files are included
+    "lib": [],
+    // Includes types for node and jsdom
+    "types": ["node", "jsdom"],
+    // Enables verbatim module syntax
+    "verbatimModuleSyntax": true,
+    // Disables preserving value imports
+    "preserveValueImports": false,
+    // Removes imports not used as values
+    "importsNotUsedAsValues": "remove"
+  }
+}

@@ -1,0 +1,27 @@
+@use '../config' as *;
+
+@include b(example) {
+  position: relative;
+  padding: var(--global-spacing);
+  text-align: center;
+}
+
+// 定义一个混合宏
+@mixin button($color) {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: $color;
+  color: #fff;
+  cursor: pointer;
+}
+
+// 使用混合宏
+// button 混合宏定义了一个按钮的样式。通过 @include，我们可以为不同的按钮类型
+.button-primary {
+  @include button(blue);
+}
+
+.button-secondary {
+  @include button(green);
+}
