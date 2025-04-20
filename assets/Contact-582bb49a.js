@@ -1,1 +1,0 @@
-import{_ as t}from"./icons-0093a006.js";import{P as e,Q as o}from"./vue-61563280.js";import"./antd-2caab38a.js";const r={};function c(n,a){return e(),o("div",null,"联系人")}const m=t(r,[["render",c]]);export{m as default};

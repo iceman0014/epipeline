@@ -1,1 +1,0 @@
-import{_ as e}from"./icons-0093a006.js";import{P as s,Q as t,R as o}from"./vue-61563280.js";import"./antd-2caab38a.js";const n={},r=o("h1",null,"Business Opportunities",-1),c=[r];function i(_,a){return s(),t("div",null,c)}const d=e(n,[["render",i]]);export{d as default};
