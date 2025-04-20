@@ -1,0 +1,1 @@
+.loading-container[data-v-5e8ba03c]{display:flex;align-items:center;justify-content:center;flex-direction:column;height:100vh;font-size:24px}.car-animation[data-v-5e8ba03c]{font-size:48px;animation:moveCar-5e8ba03c 1s linear infinite}@keyframes moveCar-5e8ba03c{0%{transform:translate(0)}50%{transform:translate(20px)}to{transform:translate(0)}}

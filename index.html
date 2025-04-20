@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/micro/epipeline-customer-manage-system/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>new-icu</title>
+    <script crossorigin="">import('/micro/epipeline-customer-manage-system/assets/index-a82a6142.js').finally(() => {
+            
+    const qiankunLifeCycle = window.moudleQiankunAppLifeCycles && window.moudleQiankunAppLifeCycles['epipeline-customer-manage-system'];
+    if (qiankunLifeCycle) {
+      window.proxy.vitemount((props) => qiankunLifeCycle.mount(props));
+      window.proxy.viteunmount((props) => qiankunLifeCycle.unmount(props));
+      window.proxy.vitebootstrap(() => qiankunLifeCycle.bootstrap());
+      window.proxy.viteupdate((props) => qiankunLifeCycle.update(props));
+    }
+  
+          })</script>
+    <link rel="modulepreload" crossorigin="" href="/micro/epipeline-customer-manage-system/assets/antd-2caab38a.js">
+    <link rel="modulepreload" crossorigin="" href="/micro/epipeline-customer-manage-system/assets/vue-61563280.js">
+    <link rel="modulepreload" crossorigin="" href="/micro/epipeline-customer-manage-system/assets/icons-0093a006.js">
+    <link rel="stylesheet" href="/micro/epipeline-customer-manage-system/assets/antd-c20eb707.css">
+    <link rel="stylesheet" href="/micro/epipeline-customer-manage-system/assets/index-08415e6a.css">
+  </head>
+  <body>
+    <div id="micro-new-icu-app"></div>
+    
+  
+
+<script>
+  const createDeffer = (hookName) => {
+    const d = new Promise((resolve, reject) => {
+      window.proxy && (window.proxy[`vite${hookName}`] = resolve)
+    })
+    return props => d.then(fn => fn(props));
+  }
+  const bootstrap = createDeffer('bootstrap');
+  const mount = createDeffer('mount');
+  const unmount = createDeffer('unmount');
+  const update = createDeffer('update');
+
+  ;(global => {
+    global.qiankunName = 'epipeline-customer-manage-system';
+    global['epipeline-customer-manage-system'] = {
+      bootstrap,
+      mount,
+      unmount,
+      update
+    };
+  })(window);
+</script></body></html>
